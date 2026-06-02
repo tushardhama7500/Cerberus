@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  opa:
+    image: openpolicyagent/opa:latest
+    container_name: cerberus-opa
+    ports:
+      - "8181:8181"
+    volumes:
+      # Mount policies directory so OPA can load them
+      - ./policies:/policies
+    command:
+      - "run"
+      - "--server"
+      - "--log-level=info"
+      - "--log-format=json"
+      - "--bundle"
+      - "/policies"
+    environment:
+      - OPA_LOG_LEVEL=info
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8181/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - cerberus-network
+
+networks:
+  cerberus-network:
+    driver: bridge

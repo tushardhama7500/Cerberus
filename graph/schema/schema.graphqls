@@ -1,0 +1,152 @@
+# ─────────────────────────────────────────
+# ENUMS
+# ─────────────────────────────────────────
+enum Role {
+  EMPLOYEE
+  SUPPORT
+  ENGINEERING
+  ADMIN
+}
+
+enum RequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  UNDER_REVIEW
+}
+
+enum AuditAction {
+  REQUEST_CREATED
+  REQUEST_APPROVED
+  REQUEST_REJECTED
+  REQUEST_UNDER_REVIEW
+  COMMENT_ADDED
+  SCREENSHOT_UPLOADED
+  USER_CREATED
+  USER_ROLE_CHANGED
+}
+
+# ─────────────────────────────────────────
+# TYPES
+# ─────────────────────────────────────────
+type User {
+  id: ID!
+  email: String!
+  name: String!
+  role: Role!
+  isActive: Boolean!
+  createdAt: String!
+}
+
+type AccessRequest {
+  id: ID!
+  resource: String!
+  reason: String!
+  status: RequestStatus!
+  managerEmail: String!
+  screenshotUrl: String
+  reviewComment: String
+  requester: User!
+  reviewer: User
+  createdAt: String!
+  updatedAt: String!
+  resolvedAt: String
+  auditLogs: [AuditLog!]!
+}
+
+type AuditLog {
+  id: ID!
+  action: AuditAction!
+  actorEmail: String!
+  actorRole: String!
+  metadata: String
+  createdAt: String!
+}
+
+type AuthPayload {
+  token: String!
+  user: User!
+}
+
+# ─────────────────────────────────────────
+# PAGINATION
+# ─────────────────────────────────────────
+type PageInfo {
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  total: Int!
+}
+
+type AccessRequestConnection {
+  nodes: [AccessRequest!]!
+  pageInfo: PageInfo!
+}
+
+# ─────────────────────────────────────────
+# INPUT TYPES
+# ─────────────────────────────────────────
+input RegisterInput {
+  email: String!
+  name: String!
+  password: String!
+}
+
+input LoginInput {
+  email: String!
+  password: String!
+}
+
+input CreateAccessRequestInput {
+  resource: String!
+  reason: String!
+  managerEmail: String!
+}
+
+input ReviewRequestInput {
+  requestId: ID!
+  comment: String
+}
+
+input AccessRequestFilter {
+  requesterEmail: String
+  status: RequestStatus
+  resource: String
+}
+
+input PaginationInput {
+  page: Int!
+  pageSize: Int!
+}
+
+input UpdateUserRoleInput {
+  userId: ID!
+  role: Role!
+}
+
+# ─────────────────────────────────────────
+# QUERIES
+# ─────────────────────────────────────────
+type Query {
+  accessRequest(id: ID!): AccessRequest!
+  accessRequests(
+    filter: AccessRequestFilter
+    pagination: PaginationInput
+  ): AccessRequestConnection!
+  me: User!
+  users: [User!]!
+  auditLogs(requestId: ID!): [AuditLog!]!
+}
+
+# ─────────────────────────────────────────
+# MUTATIONS
+# ─────────────────────────────────────────
+type Mutation {
+  register(input: RegisterInput!): AuthPayload!
+  login(input: LoginInput!): AuthPayload!
+  createAccessRequest(input: CreateAccessRequestInput!): AccessRequest!
+  uploadScreenshot(requestId: ID!, fileBase64: String!, fileName: String!): AccessRequest!
+  approveRequest(input: ReviewRequestInput!): AccessRequest!
+  rejectRequest(input: ReviewRequestInput!): AccessRequest!
+  markUnderReview(input: ReviewRequestInput!): AccessRequest!
+  updateUserRole(input: UpdateUserRoleInput!): User!
+}

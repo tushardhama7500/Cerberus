@@ -1,0 +1,36 @@
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Go build output
+bin/
+dist/
+build/
+*.exe
+*.out
+*.test
+coverage/
+coverage.*
+
+# Go workspace and dependency cache
+go.work
+go.work.sum
+vendor/
+
+# Generated local files
+tmp/
+*.log
+
+# IDE and editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Docker overrides
+docker-compose.override.yml
