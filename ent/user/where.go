@@ -300,6 +300,36 @@ func RoleNotIn(vs ...Role) predicate.User {
 	return predicate.User(sql.FieldNotIn(FieldRole, vs...))
 }
 
+// DepartmentEQ applies the EQ predicate on the "department" field.
+func DepartmentEQ(v Department) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldDepartment, v))
+}
+
+// DepartmentNEQ applies the NEQ predicate on the "department" field.
+func DepartmentNEQ(v Department) predicate.User {
+	return predicate.User(sql.FieldNEQ(FieldDepartment, v))
+}
+
+// DepartmentIn applies the In predicate on the "department" field.
+func DepartmentIn(vs ...Department) predicate.User {
+	return predicate.User(sql.FieldIn(FieldDepartment, vs...))
+}
+
+// DepartmentNotIn applies the NotIn predicate on the "department" field.
+func DepartmentNotIn(vs ...Department) predicate.User {
+	return predicate.User(sql.FieldNotIn(FieldDepartment, vs...))
+}
+
+// DepartmentIsNil applies the IsNil predicate on the "department" field.
+func DepartmentIsNil() predicate.User {
+	return predicate.User(sql.FieldIsNull(FieldDepartment))
+}
+
+// DepartmentNotNil applies the NotNil predicate on the "department" field.
+func DepartmentNotNil() predicate.User {
+	return predicate.User(sql.FieldNotNull(FieldDepartment))
+}
+
 // IsActiveEQ applies the EQ predicate on the "is_active" field.
 func IsActiveEQ(v bool) predicate.User {
 	return predicate.User(sql.FieldEQ(FieldIsActive, v))

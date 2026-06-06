@@ -23,6 +23,8 @@ const (
 	FieldPasswordHash = "password_hash"
 	// FieldRole holds the string denoting the role field in the database.
 	FieldRole = "role"
+	// FieldDepartment holds the string denoting the department field in the database.
+	FieldDepartment = "department"
 	// FieldIsActive holds the string denoting the is_active field in the database.
 	FieldIsActive = "is_active"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
@@ -67,6 +69,7 @@ var Columns = []string{
 	FieldName,
 	FieldPasswordHash,
 	FieldRole,
+	FieldDepartment,
 	FieldIsActive,
 	FieldCreatedAt,
 	FieldUpdatedAt,
@@ -106,9 +109,10 @@ const DefaultRole = RoleEMPLOYEE
 // Role values.
 const (
 	RoleEMPLOYEE    Role = "EMPLOYEE"
-	RoleSUPPORT     Role = "SUPPORT"
-	RoleENGINEERING Role = "ENGINEERING"
+	RoleAPPROVER    Role = "APPROVER"
+	RoleMANAGER     Role = "MANAGER"
 	RoleADMIN       Role = "ADMIN"
+	RoleSUPER_ADMIN Role = "SUPER_ADMIN"
 )
 
 func (r Role) String() string {
@@ -118,10 +122,36 @@ func (r Role) String() string {
 // RoleValidator is a validator for the "role" field enum values. It is called by the builders before save.
 func RoleValidator(r Role) error {
 	switch r {
-	case RoleEMPLOYEE, RoleSUPPORT, RoleENGINEERING, RoleADMIN:
+	case RoleEMPLOYEE, RoleAPPROVER, RoleMANAGER, RoleADMIN, RoleSUPER_ADMIN:
 		return nil
 	default:
 		return fmt.Errorf("user: invalid enum value for role field: %q", r)
+	}
+}
+
+// Department defines the type for the "department" enum field.
+type Department string
+
+// Department values.
+const (
+	DepartmentENGINEERING Department = "ENGINEERING"
+	DepartmentSUPPORT     Department = "SUPPORT"
+	DepartmentFINANCE     Department = "FINANCE"
+	DepartmentHR          Department = "HR"
+	DepartmentSALES       Department = "SALES"
+)
+
+func (d Department) String() string {
+	return string(d)
+}
+
+// DepartmentValidator is a validator for the "department" field enum values. It is called by the builders before save.
+func DepartmentValidator(d Department) error {
+	switch d {
+	case DepartmentENGINEERING, DepartmentSUPPORT, DepartmentFINANCE, DepartmentHR, DepartmentSALES:
+		return nil
+	default:
+		return fmt.Errorf("user: invalid enum value for department field: %q", d)
 	}
 }
 
@@ -151,6 +181,11 @@ func ByPasswordHash(opts ...sql.OrderTermOption) OrderOption {
 // ByRole orders the results by the role field.
 func ByRole(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldRole, opts...).ToFunc()
+}
+
+// ByDepartment orders the results by the department field.
+func ByDepartment(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldDepartment, opts...).ToFunc()
 }
 
 // ByIsActive orders the results by the is_active field.

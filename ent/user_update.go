@@ -71,6 +71,26 @@ func (_u *UserUpdate) SetNillableRole(v *user.Role) *UserUpdate {
 	return _u
 }
 
+// SetDepartment sets the "department" field.
+func (_u *UserUpdate) SetDepartment(v user.Department) *UserUpdate {
+	_u.mutation.SetDepartment(v)
+	return _u
+}
+
+// SetNillableDepartment sets the "department" field if the given value is not nil.
+func (_u *UserUpdate) SetNillableDepartment(v *user.Department) *UserUpdate {
+	if v != nil {
+		_u.SetDepartment(*v)
+	}
+	return _u
+}
+
+// ClearDepartment clears the value of the "department" field.
+func (_u *UserUpdate) ClearDepartment() *UserUpdate {
+	_u.mutation.ClearDepartment()
+	return _u
+}
+
 // SetIsActive sets the "is_active" field.
 func (_u *UserUpdate) SetIsActive(v bool) *UserUpdate {
 	_u.mutation.SetIsActive(v)
@@ -252,6 +272,11 @@ func (_u *UserUpdate) check() error {
 			return &ValidationError{Name: "role", err: fmt.Errorf(`ent: validator failed for field "User.role": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.Department(); ok {
+		if err := user.DepartmentValidator(v); err != nil {
+			return &ValidationError{Name: "department", err: fmt.Errorf(`ent: validator failed for field "User.department": %w`, err)}
+		}
+	}
 	return nil
 }
 
@@ -275,6 +300,12 @@ func (_u *UserUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if value, ok := _u.mutation.Role(); ok {
 		_spec.SetField(user.FieldRole, field.TypeEnum, value)
+	}
+	if value, ok := _u.mutation.Department(); ok {
+		_spec.SetField(user.FieldDepartment, field.TypeEnum, value)
+	}
+	if _u.mutation.DepartmentCleared() {
+		_spec.ClearField(user.FieldDepartment, field.TypeEnum)
 	}
 	if value, ok := _u.mutation.IsActive(); ok {
 		_spec.SetField(user.FieldIsActive, field.TypeBool, value)
@@ -479,6 +510,26 @@ func (_u *UserUpdateOne) SetNillableRole(v *user.Role) *UserUpdateOne {
 	return _u
 }
 
+// SetDepartment sets the "department" field.
+func (_u *UserUpdateOne) SetDepartment(v user.Department) *UserUpdateOne {
+	_u.mutation.SetDepartment(v)
+	return _u
+}
+
+// SetNillableDepartment sets the "department" field if the given value is not nil.
+func (_u *UserUpdateOne) SetNillableDepartment(v *user.Department) *UserUpdateOne {
+	if v != nil {
+		_u.SetDepartment(*v)
+	}
+	return _u
+}
+
+// ClearDepartment clears the value of the "department" field.
+func (_u *UserUpdateOne) ClearDepartment() *UserUpdateOne {
+	_u.mutation.ClearDepartment()
+	return _u
+}
+
 // SetIsActive sets the "is_active" field.
 func (_u *UserUpdateOne) SetIsActive(v bool) *UserUpdateOne {
 	_u.mutation.SetIsActive(v)
@@ -673,6 +724,11 @@ func (_u *UserUpdateOne) check() error {
 			return &ValidationError{Name: "role", err: fmt.Errorf(`ent: validator failed for field "User.role": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.Department(); ok {
+		if err := user.DepartmentValidator(v); err != nil {
+			return &ValidationError{Name: "department", err: fmt.Errorf(`ent: validator failed for field "User.department": %w`, err)}
+		}
+	}
 	return nil
 }
 
@@ -713,6 +769,12 @@ func (_u *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) {
 	}
 	if value, ok := _u.mutation.Role(); ok {
 		_spec.SetField(user.FieldRole, field.TypeEnum, value)
+	}
+	if value, ok := _u.mutation.Department(); ok {
+		_spec.SetField(user.FieldDepartment, field.TypeEnum, value)
+	}
+	if _u.mutation.DepartmentCleared() {
+		_spec.ClearField(user.FieldDepartment, field.TypeEnum)
 	}
 	if value, ok := _u.mutation.IsActive(); ok {
 		_spec.SetField(user.FieldIsActive, field.TypeBool, value)

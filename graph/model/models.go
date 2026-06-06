@@ -1,12 +1,13 @@
 package model
 
 type User struct {
-	ID        string `json:"id"`
-	Email     string `json:"email"`
-	Name      string `json:"name"`
-	Role      Role   `json:"role"`
-	IsActive  bool   `json:"isActive"`
-	CreatedAt string `json:"createdAt"`
+	ID         string     `json:"id"`
+	Email      string     `json:"email"`
+	Name       string     `json:"name"`
+	Role       Role       `json:"role"`
+	Department Department `json:"department"`
+	IsActive   bool       `json:"isActive"`
+	CreatedAt  string     `json:"createdAt"`
 }
 
 type AccessRequest struct {
@@ -51,9 +52,10 @@ type AccessRequestConnection struct {
 }
 
 type RegisterInput struct {
-	Email    string `json:"email"`
-	Name     string `json:"name"`
-	Password string `json:"password"`
+	Email      string `json:"email"`
+	Name       string `json:"name"`
+	Password   string `json:"password"`
+	Department string `json:"department"`
 }
 
 type LoginInput struct {
@@ -91,10 +93,21 @@ type UpdateUserRoleInput struct {
 type Role string
 
 const (
-	RoleEmployee    Role = "EMPLOYEE"
-	RoleSupport     Role = "SUPPORT"
-	RoleEngineering Role = "ENGINEERING"
-	RoleAdmin       Role = "ADMIN"
+	RoleEmployee   Role = "EMPLOYEE"
+	RoleApprover   Role = "APPROVER"
+	RoleManager    Role = "MANAGER"
+	RoleAdmin      Role = "ADMIN"
+	RoleSuperAdmin Role = "SUPER_ADMIN"
+)
+
+type Department string
+
+const (
+	DepartmentEngineering Department = "ENGINEERING"
+	DepartmentSupport     Department = "SUPPORT"
+	DepartmentFinance     Department = "FINANCE"
+	DepartmentHR          Department = "HR"
+	DepartmentSales       Department = "SALES"
 )
 
 type RequestStatus string

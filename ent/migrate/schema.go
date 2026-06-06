@@ -124,7 +124,8 @@ var (
 		{Name: "email", Type: field.TypeString, Unique: true},
 		{Name: "name", Type: field.TypeString},
 		{Name: "password_hash", Type: field.TypeString},
-		{Name: "role", Type: field.TypeEnum, Enums: []string{"EMPLOYEE", "SUPPORT", "ENGINEERING", "ADMIN"}, Default: "EMPLOYEE"},
+		{Name: "role", Type: field.TypeEnum, Enums: []string{"EMPLOYEE", "APPROVER", "MANAGER", "ADMIN", "SUPER_ADMIN"}, Default: "EMPLOYEE"},
+		{Name: "department", Type: field.TypeEnum, Nullable: true, Enums: []string{"ENGINEERING", "SUPPORT", "FINANCE", "HR", "SALES"}},
 		{Name: "is_active", Type: field.TypeBool, Default: true},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
@@ -144,6 +145,11 @@ var (
 				Name:    "user_role",
 				Unique:  false,
 				Columns: []*schema.Column{UsersColumns[4]},
+			},
+			{
+				Name:    "user_department",
+				Unique:  false,
+				Columns: []*schema.Column{UsersColumns[5]},
 			},
 		},
 	}

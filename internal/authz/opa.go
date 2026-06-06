@@ -76,6 +76,7 @@ func (c *Client) Allow(
 	resource, _ := input["resource"].(string)
 	user, _ := input["user"].(map[string]interface{})
 	data, _ := input["data"].(map[string]interface{})
+	fmt.Printf("\n\nOPA Allow called with action: %s, resource: %s, user: %v, data: %v", action, resource, user, data)
 
 	opaInput := OPAInput{
 		Action:   action,
@@ -110,15 +111,19 @@ func (c *Client) Evaluate(
 	// Marshal request
 	body, err := json.Marshal(req)
 	if err != nil {
+		fmt.Printf("\n\n failed to marshal OPA request : %v", err)
 		return nil, fmt.Errorf("failed to marshal OPA request: %w", err)
 	}
 
 	// Build OPA URL
 	url := fmt.Sprintf("%s/v1/data/%s", c.baseURL, path)
+	fmt.Printf("\n\n Sending OPA request to URL: %s with body: %s", url, string(body))
 
 	// Create HTTP request
 	httpReq, err := http.NewRequestWithContext(evalCtx, "POST", url, bytes.NewBuffer(body))
+	fmt.Printf("\n\n Created HTTP request for OPA: %v", httpReq)
 	if err != nil {
+		fmt.Printf("\n\n Failed to create OPA request: %v", err)
 		return nil, fmt.Errorf("failed to create OPA request: %w", err)
 	}
 
@@ -127,6 +132,7 @@ func (c *Client) Evaluate(
 	// Execute request
 	resp, err := c.httpClient.Do(httpReq)
 	if err != nil {
+		fmt.Printf("\n\n OPA request failed: %v", err)
 		return nil, fmt.Errorf("OPA request failed: %w", err)
 	}
 	defer resp.Body.Close()
@@ -134,17 +140,20 @@ func (c *Client) Evaluate(
 	// Read response
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
+		fmt.Printf("\n\n Failed to read OPA response: %v", err)
 		return nil, fmt.Errorf("failed to read OPA response: %w", err)
 	}
 
 	// Check HTTP status
 	if resp.StatusCode != http.StatusOK {
+		fmt.Printf("\n\n OPA returned non-200 status: %d, body: %s", resp.StatusCode, string(respBody))
 		return nil, fmt.Errorf("OPA returned status %d: %s", resp.StatusCode, string(respBody))
 	}
 
 	// Parse response
 	var opaResp OPAResponse
 	if err := json.Unmarshal(respBody, &opaResp); err != nil {
+		fmt.Printf("\n\n Failed to parse OPA response: %v", err)
 		return nil, fmt.Errorf("failed to parse OPA response: %w", err)
 	}
 

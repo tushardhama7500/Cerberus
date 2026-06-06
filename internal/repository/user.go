@@ -17,13 +17,14 @@ func NewUserRepository(client *ent.Client) *UserRepository {
 	return &UserRepository{client: client}
 }
 
-func (r *UserRepository) Create(ctx context.Context, email, name, passwordHash string) (*ent.User, error) {
+func (r *UserRepository) Create(ctx context.Context, email, name, passwordHash, department string) (*ent.User, error) {
 	u, err := r.client.User.
 		Create().
 		SetEmail(email).
 		SetName(name).
 		SetPasswordHash(passwordHash).
-		SetRole(user.RoleEMPLOYEE).
+		SetRole(user.RoleEMPLOYEE).                 // Default role — can be updated by admin
+		SetDepartment(user.Department(department)). // Default department
 		Save(ctx)
 	if err != nil {
 		if ent.IsConstraintError(err) {
@@ -36,16 +37,26 @@ func (r *UserRepository) Create(ctx context.Context, email, name, passwordHash s
 
 func (r *UserRepository) FindByEmail(ctx context.Context, email string) (*ent.User, error) {
 	fmt.Println("11. UserRepository.FindByEmail called")
+
 	u, err := r.client.User.
 		Query().
 		Where(user.EmailEQ(email)).
 		Only(ctx)
+
+	fmt.Printf("err = %#v\n", err)
+
 	if err != nil {
 		if ent.IsNotFound(err) {
-			return nil, nil // Caller checks nil
+			fmt.Printf("\n\n [5] There is a error inside err!=nil and it's a NotFound error. Returning nil, nil")
+			return nil, nil
 		}
+		fmt.Printf("\n\n [6] Not inside the isnotfound error-->")
 		return nil, fmt.Errorf("find user by email: %w", err)
 	}
+
+	fmt.Printf("12. User found and email, password is: %v, %v\n",
+		u.Email, u.PasswordHash)
+
 	return u, nil
 }
 

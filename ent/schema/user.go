@@ -25,8 +25,18 @@ func (User) Fields() []ent.Field {
 		field.String("password_hash").
 			Sensitive(), // Ent won't log this field
 		field.Enum("role").
-			Values("EMPLOYEE", "SUPPORT", "ENGINEERING", "ADMIN").
+			Values("EMPLOYEE", "APPROVER", "MANAGER", "ADMIN", "SUPER_ADMIN").
 			Default("EMPLOYEE"),
+		field.Enum("department").
+			Values(
+				"ENGINEERING",
+				"SUPPORT",
+				"FINANCE",
+				"HR",
+				"SALES",
+			).
+			Optional().
+			Nillable(),
 		field.Bool("is_active").
 			Default(true),
 		field.Time("created_at").
@@ -55,5 +65,6 @@ func (User) Indexes() []ent.Index {
 	return []ent.Index{
 		index.Fields("email"),
 		index.Fields("role"),
+		index.Fields("department"),
 	}
 }

@@ -1,95 +1,54 @@
 package authz
 
-import data.authz
-
-# ─── APPROVE REQUEST ──────────────────────────────────────────────────────
-allow {
-    input.action == "approve_request"
-    authz.is_admin
+review_actions := {
+    "approve_request",
+    "reject_request",
+    "mark_under_review",
 }
 
-allow {
-    input.action == "approve_request"
-    authz.user_role == "ENGINEERING"
-    input.resource == "engineering-system"
-}
-
-allow {
-    input.action == "approve_request"
-    authz.user_role == "SUPPORT"
-    input.resource == "support-system"
+permitted {
+    review_actions[input.action]
+    can_review
 }
 
 deny[reason] {
-    input.action == "approve_request"
-    input.user.role == "EMPLOYEE"
-    reason := "EMPLOYEE cannot approve requests"
+    review_actions[input.action]
+    is_employee
+    reason := sprintf(
+        "User %v with role EMPLOYEE cannot %v. Employees can create requests, upload screenshots, and view their own requests only.",
+        [input.user.email, input.action],
+    )
 }
 
 deny[reason] {
-    input.action == "approve_request"
-    not authz.is_admin
-    not (authz.user_role == "ENGINEERING" and input.resource == "engineering-system")
-    not (authz.user_role == "SUPPORT" and input.resource == "support-system")
-    reason := sprintf("User role %v cannot approve resource %v", [authz.user_role, input.resource])
-}
-
-# ─── REJECT REQUEST ──────────────────────────────────────────────────────
-allow {
-    input.action == "reject_request"
-    authz.is_admin
-}
-
-allow {
-    input.action == "reject_request"
-    authz.user_role == "ENGINEERING"
-    input.resource == "engineering-system"
-}
-
-allow {
-    input.action == "reject_request"
-    authz.user_role == "SUPPORT"
-    input.resource == "support-system"
+    review_actions[input.action]
+    is_manager
+    not same_department
+    reason := sprintf(
+        "Manager %v belongs to department %v and cannot %v a request for department %v.",
+        [input.user.email, user_department, input.action, request_department],
+    )
 }
 
 deny[reason] {
-    input.action == "reject_request"
-    input.user.role == "EMPLOYEE"
-    reason := "EMPLOYEE cannot reject requests"
-}
-
-# ─── MARK UNDER REVIEW ──────────────────────────────────────────────────
-allow {
-    input.action == "mark_under_review"
-    authz.is_admin
-}
-
-allow {
-    input.action == "mark_under_review"
-    authz.user_role == "ENGINEERING"
-    input.resource == "engineering-system"
-}
-
-allow {
-    input.action == "mark_under_review"
-    authz.user_role == "SUPPORT"
-    input.resource == "support-system"
+    review_actions[input.action]
+    is_approver
+    not same_department
+    reason := sprintf(
+        "Approver %v belongs to department %v and cannot %v a request for department %v.",
+        [input.user.email, user_department, input.action, request_department],
+    )
 }
 
 deny[reason] {
-    input.action == "mark_under_review"
-    input.user.role == "EMPLOYEE"
-    reason := "EMPLOYEE cannot mark requests under review"
-}
-
-# ─── UPDATE USER ROLE (admin only) ──────────────────────────────────────
-allow {
-    input.action == "update_user_role"
-    authz.is_admin
-}
-
-deny[reason] {
-    input.action == "update_user_role"
-    not authz.is_admin
-    reason := sprintf("User %v (role: %v) cannot update user roles", [input.user.email, authz.user_role])
+    review_actions[input.action]
+    not is_super_admin
+    not is_admin
+    not is_manager
+    not is_approver
+    not is_employee
+    reason := sprintf(
+        "User %v has unsupported role %v and cannot %v.",
+        [input.user.email, user_role, input.action],
+    )
 }

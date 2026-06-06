@@ -24,17 +24,19 @@ func mapUser(u *ent.User) *model.User {
 		return nil
 	}
 	return &model.User{
-		ID:        fmt.Sprintf("%d", u.ID),
-		Email:     u.Email,
-		Name:      u.Name,
-		Role:      model.Role(u.Role),
-		IsActive:  u.IsActive,
-		CreatedAt: u.CreatedAt.Format("2006-01-02T15:04:05Z"),
+		ID:         fmt.Sprintf("%d", u.ID),
+		Email:      u.Email,
+		Name:       u.Name,
+		Role:       model.Role(u.Role),
+		Department: model.Department(*u.Department),
+		IsActive:   u.IsActive,
+		CreatedAt:  u.CreatedAt.Format("2006-01-02T15:04:05Z"),
 	}
 }
 
 func mapAccessRequest(req *ent.AccessRequest) *model.AccessRequest {
 	if req == nil {
+		fmt.Printf("\n\n 13. Received nil access request in mapAccessRequest")
 		return nil
 	}
 
@@ -61,13 +63,16 @@ func mapAccessRequest(req *ent.AccessRequest) *model.AccessRequest {
 	if req.Edges.Requester != nil {
 		r.Requester = mapUser(req.Edges.Requester)
 	}
+	fmt.Printf("\nRequester Edge: %+v", req.Edges.Requester)
+	fmt.Printf("\nReviewer Edge: %+v", req.Edges.Reviewer)
+	fmt.Printf("\nAuditLogs Count: %d", len(req.Edges.AuditLogs))
 	if req.Edges.Reviewer != nil {
 		r.Reviewer = mapUser(req.Edges.Reviewer)
 	}
 	for _, l := range req.Edges.AuditLogs {
 		r.AuditLogs = append(r.AuditLogs, mapAuditLog(l))
 	}
-
+	fmt.Printf("\n\n 14. Access request mapped successfully: %v", r)
 	return r
 }
 

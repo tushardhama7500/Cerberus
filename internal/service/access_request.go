@@ -47,14 +47,37 @@ func (s *AccessRequestService) Create(
 ) (*ent.AccessRequest, error) {
 	// Validate manager email exists in system
 	manager, err := s.userRepo.FindByEmail(ctx, managerEmail)
+	fmt.Printf("\n\n 10. Manager lookup result: %v, error: %v", manager, err)
+	user, err := s.userRepo.FindByID(ctx, requesterID)
+	if err != nil {
+		return nil, err
+	}
+
+	opaInput := map[string]interface{}{
+		"action": "create_request",
+		"user": map[string]interface{}{
+			"email":      user.Email,
+			"role":       user.Role,
+			"is_active":  user.IsActive,
+			"department": user.Department,
+		},
+	}
+	allowed, err := s.opaClient.Allow(ctx, opaInput)
 	if err != nil {
 		return nil, apperrors.Internal("manager lookup failed", err)
 	}
+	if !allowed {
+		fmt.Printf("\n\n OPA policy denied access for user %s with role %s to create request", user.Email, user.Role)
+		return nil, apperrors.Forbidden("access denied")
+	}
+
 	if manager == nil {
 		return nil, apperrors.ValidationError(fmt.Sprintf("manager with email %s not found in system", managerEmail))
 	}
 
 	req, err := s.requestRepo.Create(ctx, resource, reason, managerEmail, requesterID)
+	req.Edges.Requester = user
+	fmt.Printf("\n\n 11. AccessRequest creation result: %v, error: %v", req, err)
 	if err != nil {
 		return nil, apperrors.Internal("failed to create request", err)
 	}
@@ -86,14 +109,41 @@ func (s *AccessRequestService) UploadScreenshot(
 	if err != nil || req == nil {
 		return nil, apperrors.NotFound("access request")
 	}
-
-	// Only the requester can upload screenshot
-	if req.Edges.Requester.Email != actorEmail {
-		return nil, apperrors.Forbidden("only the requester can upload screenshots")
+	opaInput := map[string]interface{}{
+		"action":   "upload_screenshot",
+		"resource": req.Resource,
+		"user": map[string]interface{}{
+			"email":      actorEmail,
+			"role":       actorRole,
+			"is_active":  req.Edges.Requester.IsActive,
+			"department": req.Edges.Requester.Department,
+		},
+		"data": map[string]interface{}{
+			"request": map[string]interface{}{
+				"requester_email": req.Edges.Requester.Email,
+			},
+		},
 	}
 
-	url, err := s.s3Client.UploadBase64(ctx, fmt.Sprintf("%d", requestID), fileName, fileBase64)
+	allowed, err := s.opaClient.Allow(ctx, opaInput)
+	fmt.Printf("\n\n OPA authorization result for uploading screenshot: allowed=%v, error=%v", allowed, err)
 	if err != nil {
+		return nil, apperrors.Internal("OPA authorization failed", err)
+	}
+
+	if !allowed {
+		return nil, apperrors.Forbidden("not authorized to upload screenshot")
+	}
+
+	// Only the requester can upload screenshot
+	// if req.Edges.Requester.Email != actorEmail {
+	// 	return nil, apperrors.Forbidden("only the requester can upload screenshots")
+	// }
+
+	url, err := s.s3Client.UploadBase64(ctx, fmt.Sprintf("%d", requestID), fileName, fileBase64)
+	fmt.Printf("\n\n 12. S3 upload result: %s, error: %v", url, err)
+	if err != nil {
+		fmt.Printf("\n\n S3 upload failed for request %d: %v", requestID, err)
 		return nil, apperrors.Internal("screenshot upload failed", err)
 	}
 
@@ -115,7 +165,7 @@ func (s *AccessRequestService) UploadScreenshot(
 // 1. Fetch request from DB
 // 2. Check request is not already in terminal state (approved/rejected)
 // 3. Check user role is allowed (SUPPORT/ENGINEERING/ADMIN)
-// 4. ✨ NEW: Check OPA policy for action + resource + role combo
+// 4. NEW: Check OPA policy for action + resource + role combo
 // 5. Update request status in DB
 // 6. Create audit log entry
 func (s *AccessRequestService) reviewAction(
@@ -126,46 +176,47 @@ func (s *AccessRequestService) reviewAction(
 	comment *string,
 	actorID int,
 	actorEmail, actorRole string,
-	opaAction string, // NEW: pass the OPA action name (e.g., "approve_request")
+	opaAction string,
 ) (*ent.AccessRequest, error) {
-	// ────── Step 1: Check the request exists ─────────────────────────────────
 	req, err := s.requestRepo.FindByID(ctx, requestID)
 	if err != nil || req == nil {
 		return nil, apperrors.NotFound("access request")
 	}
 
-	// ────── Step 2: Prevent duplicate final actions ────────────────────────────
-	// Terminal states are immutable — once approved/rejected, cannot change
+	reviewer, err := s.userRepo.FindByID(ctx, actorID)
+	if err != nil || reviewer == nil {
+		return nil, apperrors.NotFound("reviewer")
+	}
+
 	if req.Status == accessrequest.StatusAPPROVED || req.Status == accessrequest.StatusREJECTED {
 		return nil, apperrors.ValidationError(
 			fmt.Sprintf("request is already %s and cannot be changed", req.Status),
 		)
 	}
 
-	// ────── Step 3: Basic role check ───────────────────────────────────────────
-	// Only SUPPORT, ENGINEERING, ADMIN can review (not EMPLOYEE)
-	allowedRoles := map[string]bool{"SUPPORT": true, "ENGINEERING": true, "ADMIN": true}
-	if !allowedRoles[actorRole] {
-		return nil, apperrors.Forbidden("insufficient permissions to review requests")
-	}
-
-	// ────── Step 4: ✨ NEW OPA Authorization Check ──────────────────────────────
-	// Evaluate OPA policy to check if user can perform action on this resource
 	allowed, err := s.opaClient.Allow(ctx, map[string]any{
-		"action":   opaAction,    // e.g., "approve_request", "reject_request"
-		"resource": req.Resource, // e.g., "engineering-system", "support-system"
+		"action":   opaAction,
+		"resource": req.Resource,
+
 		"user": map[string]any{
-			"email": actorEmail,
-			"role":  actorRole,
+			"email":      reviewer.Email,
+			"role":       reviewer.Role,
+			"department": reviewer.Department,
+			"is_active":  reviewer.IsActive,
+		},
+
+		"data": map[string]any{
+			"request": map[string]any{
+				"department":      req.Edges.Requester.Department,
+				"requester_email": req.Edges.Requester.Email,
+			},
 		},
 	})
 
-	// If OPA check errors (unreachable, network issue) — fail-close (deny)
 	if err != nil {
 		return nil, apperrors.Internal("authorization check failed", err)
 	}
 
-	// If OPA returns false (policy denies) — return 403 Forbidden
 	if !allowed {
 		return nil, apperrors.Forbidden(
 			fmt.Sprintf("user %s with role %s cannot perform %s on resource %s",
@@ -173,20 +224,17 @@ func (s *AccessRequestService) reviewAction(
 		)
 	}
 
-	// ────── Step 5: Update request in database ─────────────────────────────────
 	updated, err := s.requestRepo.UpdateStatus(ctx, requestID, status, actorID, comment)
 	if err != nil {
 		return nil, apperrors.Internal("failed to update request", err)
 	}
 
-	// ────── Step 6: Create audit log ───────────────────────────────────────────
 	meta := fmt.Sprintf(`{"previous_status":"%s","new_status":"%s"}`, req.Status, status)
-	s.auditRepo.Create(ctx, auditAction, actorEmail, actorRole, requestID, &meta) //nolint
+	s.auditRepo.Create(ctx, auditAction, actorEmail, actorRole, requestID, &meta)
 
 	return updated, nil
 }
 
-// Approve handles request approval with OPA authorization check
 func (s *AccessRequestService) Approve(
 	ctx context.Context, requestID, actorID int,
 	comment *string, actorEmail, actorRole string,
@@ -200,7 +248,6 @@ func (s *AccessRequestService) Approve(
 	)
 }
 
-// Reject handles request rejection with OPA authorization check
 func (s *AccessRequestService) Reject(
 	ctx context.Context, requestID, actorID int,
 	comment *string, actorEmail, actorRole string,
@@ -295,10 +342,9 @@ func (s *AccessRequestService) UpdateUserRole(
 	ctx context.Context,
 	userID int,
 	role string,
-	actorEmail, actorRole string, // NEW: add actor context for OPA
+	actorEmail, actorRole string,
 ) (*ent.User, error) {
-	// ────── Step 1: ✨ NEW OPA Authorization Check ──────────────────────────────
-	// Only ADMIN can update user roles
+
 	allowed, err := s.opaClient.Allow(ctx, map[string]any{
 		"action":   "update_user_role",
 		"resource": "user-management",
@@ -308,12 +354,10 @@ func (s *AccessRequestService) UpdateUserRole(
 		},
 	})
 
-	// If OPA check errors — fail-close (deny)
 	if err != nil {
 		return nil, apperrors.Internal("authorization check failed", err)
 	}
 
-	// If OPA returns false — return 403 Forbidden
 	if !allowed {
 		return nil, apperrors.Forbidden(
 			fmt.Sprintf("user %s with role %s cannot update user roles",
@@ -321,7 +365,6 @@ func (s *AccessRequestService) UpdateUserRole(
 		)
 	}
 
-	// ────── Step 2: Update user role in database ──────────────────────────────
 	u, err := s.userRepo.UpdateRole(ctx, userID, user.Role(role))
 	if err != nil {
 		return nil, apperrors.Internal("failed to update role", err)

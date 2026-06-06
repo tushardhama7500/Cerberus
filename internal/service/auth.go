@@ -23,9 +23,10 @@ func NewAuthService(userRepo *repository.UserRepository, cfg *config.Config) *Au
 }
 
 type RegisterInput struct {
-	Email    string
-	Name     string
-	Password string
+	Email      string
+	Name       string
+	Password   string
+	Department string
 }
 
 type LoginInput struct {
@@ -46,6 +47,7 @@ func (s *AuthService) Register(ctx context.Context, input RegisterInput) (string
 
 	// Check if email already exists
 	existing, err := s.userRepo.FindByEmail(ctx, input.Email)
+	//fmt.Printf("\n\n 10. Checking if email already exists: %s", existing.Email)
 	if err != nil {
 		return "", nil, apperrors.Internal("failed to check email", err)
 	}
@@ -59,7 +61,7 @@ func (s *AuthService) Register(ctx context.Context, input RegisterInput) (string
 		return "", nil, apperrors.Internal("failed to hash password", err)
 	}
 
-	user, err := s.userRepo.Create(ctx, input.Email, input.Name, string(hash))
+	user, err := s.userRepo.Create(ctx, input.Email, input.Name, string(hash), input.Department)
 	if err != nil {
 		return "", nil, apperrors.Internal("failed to create user", err)
 	}
@@ -76,11 +78,13 @@ func (s *AuthService) Register(ctx context.Context, input RegisterInput) (string
 	}
 
 	fmt.Println("12. Generating token")
+	fmt.Printf("\n\n Generated token for user %s: %s", user.Email, token)
 	return token, user, nil
 }
 
 func (s *AuthService) Login(ctx context.Context, input LoginInput) (string, *ent.User, error) {
 	user, err := s.userRepo.FindByEmail(ctx, input.Email)
+	fmt.Printf("\n\n 14. -->  Found user in login: %v", user)
 	if err != nil {
 		return "", nil, apperrors.Internal("login failed", err)
 	}
@@ -94,6 +98,7 @@ func (s *AuthService) Login(ctx context.Context, input LoginInput) (string, *ent
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(input.Password)); err != nil {
+		fmt.Printf("\n\n 15. -->  Password mismatch for user: %v", user.Email)
 		return "", nil, apperrors.Unauthorized("invalid credentials")
 	}
 
@@ -107,6 +112,8 @@ func (s *AuthService) Login(ctx context.Context, input LoginInput) (string, *ent
 	if err != nil {
 		return "", nil, apperrors.Internal("failed to generate token", err)
 	}
+	fmt.Printf("16. Generating token for login is: %v", token)
+	fmt.Printf("\n\n 16. -->  Generated token for user: %v", user.Email)
 
 	return token, user, nil
 }

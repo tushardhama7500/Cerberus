@@ -3,9 +3,10 @@
 # ─────────────────────────────────────────
 enum Role {
   EMPLOYEE
-  SUPPORT
-  ENGINEERING
+  APPROVER
+  MANAGER
   ADMIN
+  SUPER_ADMIN
 }
 
 enum RequestStatus {
@@ -34,6 +35,7 @@ type User {
   email: String!
   name: String!
   role: Role!
+  department: String
   isActive: Boolean!
   createdAt: String!
 }
@@ -89,6 +91,7 @@ input RegisterInput {
   email: String!
   name: String!
   password: String!
+  department: String!
 }
 
 input LoginInput {
